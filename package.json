@@ -1,0 +1,33 @@
+{
+  "name": "bioinfo-web-toolkit",
+  "version": "1.0.0",
+  "description": "A web-based toolkit for bioinformatics analysis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "bioinformatics",
+    "dna",
+    "protein",
+    "sequence"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.4",
+    "express": "^4.22.1",
+    "multer": "^2.1.1",
+    "node-fetch": "^3.3.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nextto1/bioinfo-web-toolkit.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Nextto1/bioinfo-web-toolkit/issues"
+  },
+  "homepage": "https://github.com/Nextto1/bioinfo-web-toolkit#readme"
+}

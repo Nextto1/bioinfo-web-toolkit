@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Bioinformatics Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    display: flex;
+    height: 100vh;
+    background: #f4f6f8;
+}
+
+.sidebar {
+    width: 220px;
+    background: #1f2a40;
+    color: white;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.sidebar button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #2e3b55;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.sidebar button:hover {
+    background: #3d4f73;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+    height: 100vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+.section {
+    display: none;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.active {
+    display: block;
+}
+
+textarea, input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+button.run {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+}
+
+.result {
+    background: #eee;
+    padding: 10px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+}
+
+.topbar {
+    background: white;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+canvas {
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>🧬 Bio Dashboard</h2>
+    <button onclick="show('dna')">DNA → Protein</button>
+    <button onclick="show('gc')">GC Content</button>
+    <button onclick="show('motif')">Motif Search</button>
+    <button onclick="show('loc')">Localization</button>
+    <button onclick="show('blast')">BLAST Parser</button>
+    <button onclick="show('uniprot')">UniProt</button>
+    <button onclick="show('multi')">Multi Sequence</button>
+    <button onclick="show('report')">Report</button>
+</div>
+
+<div class="main">
+
+<div class="topbar">
+    🧪 Bioinformatics Analysis Platform
+</div>
+
+<!-- DNA -->
+<div id="dna" class="section active">
+    <h3>DNA → Protein</h3>
+    <textarea id="dnaSeq"></textarea>
+    <button class="run" onclick="runTool('/translate','dnaSeq','r1')">Run</button>
+    <div id="r1" class="result"></div>
+</div>
+
+<!-- GC -->
+<div id="gc" class="section">
+    <h3>GC Content</h3>
+    <textarea id="gcSeq"></textarea>
+    <button class="run" onclick="runTool('/gc','gcSeq','r2')">Run</button>
+    <div id="r2" class="result"></div>
+</div>
+
+<!-- MOTIF -->
+<div id="motif" class="section">
+    <h3>Motif Search</h3>
+    <textarea id="motifSeq"></textarea>
+    <input id="motifText" placeholder="Motif">
+    <button class="run" onclick="motifRun()">Run</button>
+    <div id="r3" class="result"></div>
+</div>
+
+<!-- LOCALIZATION -->
+<div id="loc" class="section">
+    <h3>Subcellular Localization</h3>
+
+    <textarea id="protSeq"></textarea>
+
+    <button class="run" onclick="runLocalization()">Run</button>
+
+    <div id="r4" class="result"></div>
+</div>
+
+<!-- BLAST -->
+<div id="blast" class="section">
+    <h3>BLAST Parser</h3>
+    <input type="file" id="blastFile">
+    <button class="run" onclick="blastRun()">Parse</button>
+    <div id="blastOut" class="result"></div>
+</div>
+
+<!-- UNIPROT -->
+<div id="uniprot" class="section">
+    <h3>UniProt Lookup</h3>
+    <input id="upid" placeholder="e.g. P69905">
+    <button class="run" onclick="uniprotRun()">Search</button>
+    <div id="uniOut" class="result"></div>
+</div>
+
+<!-- MULTI -->
+<div id="multi" class="section">
+    <h3>📂 Multi-Sequence Analysis</h3>
+    <input type="file" id="multiFile">
+    <button class="run" onclick="runMulti()">Analyze Sequences</button>
+    <div class="result" id="multiOut"></div>
+
+    <canvas id="gcChart"></canvas>
+    <canvas id="lenChart"></canvas>
+</div>
+
+<!-- REPORT -->
+<div id="report" class="section">
+    <h3>Final Report</h3>
+    <button class="run" onclick="downloadReport()">Download Report</button>
+    <pre id="reportText" class="result"></pre>
+</div>
+
+</div>
+
+<script>
+
+/* =========================
+   REPORT STORAGE
+========================= */
+let analysisReport = {
+    dna: [],
+    gc: [],
+    motif: [],
+    localization: [],
+    blast: [],
+    uniprot: [],
+    multi: []
+};
+
+/* NAV */
+function show(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+/* CORE */
+async function runTool(url,input,out){
+    const v=document.getElementById(input).value;
+
+    const r=await fetch(url,{
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"dna="+v
+    });
+
+    const result = await r.text();
+    document.getElementById(out).innerText=result;
+
+    if(url==="/translate") analysisReport.dna.push(result);
+    if(url==="/gc") analysisReport.gc.push(result);
+}
+
+/* MOTIF */
+async function motifRun(){
+    const seq=document.getElementById("motifSeq").value;
+    const m=document.getElementById("motifText").value;
+
+    const r=await fetch("/motif",{
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:`sequence=${seq}&motif=${m}`
+    });
+
+    const result = await r.text();
+    document.getElementById("r3").innerText=result;
+
+    analysisReport.motif.push(result);
+}
+
+/* LOCALIZATION */
+async function runLocalization(){
+
+    const seq = document.getElementById("protSeq").value;
+    const id = document.getElementById("upid")?.value || "";
+
+    const r = await fetch("/localization", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:`protein=${seq}&id=${id}`
+    });
+
+    const data = await r.json();
+
+    const display = `
+🧪 Subcellular Localization
+
+📍 Location: ${data.location}
+🎯 Confidence: ${data.confidence}
+
+🔗 Search: ${data.link}
+`;
+
+    document.getElementById("r4").innerText = display;
+
+    analysisReport.localization.push(display);
+}
+
+/* BLAST */
+async function blastRun(){
+    const f=document.getElementById("blastFile").files[0];
+    const fd=new FormData();
+    fd.append("file",f);
+
+    const r=await fetch("/upload-blast",{method:"POST",body:fd});
+    const result = await r.text();
+
+    document.getElementById("blastOut").innerText=result;
+    analysisReport.blast.push(result);
+}
+
+/* UNIPROT */
+async function uniprotRun(){
+
+    const id = document.getElementById("upid").value;
+
+    const r = await fetch("/uniprot", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"id="+id
+    });
+
+    const data = await r.json();
+
+    if(data.error){
+        document.getElementById("uniOut").innerText="❌ "+data.error;
+        return;
+    }
+
+    const display = `
+🧬 Protein: ${data.protein}
+🌍 Organism: ${data.organism}
+🧬 Gene: ${data.gene}
+📏 Length: ${data.length}
+
+🧪 Function:
+${data.functionText}
+
+🔗 https://www.uniprot.org/uniprotkb/${id}
+`;
+
+    document.getElementById("uniOut").innerText = display;
+
+    analysisReport.uniprot.push(display);
+}
+
+/* MULTI */
+async function runMulti(){
+
+    const file=document.getElementById("multiFile").files[0];
+    const fd=new FormData();
+    fd.append("file",file);
+
+    const r=await fetch("/upload-multi",{method:"POST",body:fd});
+    const data=await r.json();
+
+    document.getElementById("multiOut").innerText=data.report;
+
+    analysisReport.multi.push(data.report);
+
+    new Chart(gcChart,{
+        type:"bar",
+        data:{labels:data.labels,datasets:[{label:"GC %",data:data.gc}]}
+    });
+
+    new Chart(lenChart,{
+        type:"bar",
+        data:{labels:data.labels,datasets:[{label:"Length",data:data.length}]}
+    });
+}
+
+/* REPORT */
+function downloadReport(){
+
+    let report = `
+========================
+🧬 BIOINFORMATICS REPORT
+========================
+`;
+
+    report += "\nDNA:\n" + analysisReport.dna.join("\n\n");
+    report += "\nGC:\n" + analysisReport.gc.join("\n\n");
+    report += "\nMOTIF:\n" + analysisReport.motif.join("\n\n");
+    report += "\nLOCALIZATION:\n" + analysisReport.localization.join("\n\n");
+    report += "\nBLAST:\n" + analysisReport.blast.join("\n\n");
+    report += "\nUNIPROT:\n" + analysisReport.uniprot.join("\n\n");
+    report += "\nMULTI:\n" + analysisReport.multi.join("\n\n");
+
+    const blob=new Blob([report],{type:"text/plain"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="bioinformatics_report.txt";
+    a.click();
+}
+
+</script>
+
+</body>
+</html>
