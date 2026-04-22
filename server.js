@@ -11,7 +11,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* =========================================================
-   🧬 DNA → PROTEIN
+   🧬 DNA → PROTEIN (BASIC)
 ========================================================= */
 app.post("/translate", (req, res) => {
     const dna = req.body.dna || "";
@@ -20,6 +20,80 @@ app.post("/translate", (req, res) => {
         if (err) return res.send("❌ Translation error");
         res.send(out.trim());
     });
+});
+
+/* =========================================================
+   🧬 ADVANCED DNA → PROTEIN (6-FRAME + ORF)
+========================================================= */
+app.post("/translate-advanced", (req, res) => {
+
+    const dna = (req.body.dna || "").toUpperCase().replace(/[^ATGC]/g, "");
+
+    if (!dna) return res.json({ error: "Invalid DNA sequence" });
+
+    const complement = { A: "T", T: "A", G: "C", C: "G" };
+
+    const reverseComplement = dna
+        .split("")
+        .reverse()
+        .map(n => complement[n] || n)
+        .join("");
+
+    function translate(seq, cb) {
+        exec(`perl scripts/translate.pl "${seq}"`, (err, out) => {
+            if (err) return cb("");
+            cb(out.trim());
+        });
+    }
+
+    let frames = {};
+    let done = 0;
+
+    function checkDone() {
+        if (done === 6) {
+
+            // 🧪 ORF DETECTION
+            let orfs = [];
+
+            function findORFs(seq, label) {
+                for (let i = 0; i < seq.length - 3; i++) {
+                    if (seq.substr(i, 3) === "ATG") {
+                        for (let j = i + 3; j < seq.length; j += 3) {
+                            const codon = seq.substr(j, 3);
+                            if (["TAA", "TAG", "TGA"].includes(codon)) {
+
+                                orfs.push({
+                                    frame: label,
+                                    start: i + 1,
+                                    end: j + 3,
+                                    length: j + 3 - i
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            findORFs(dna, "+");
+            findORFs(reverseComplement, "-");
+
+            let bestORF = orfs.sort((a, b) => b.length - a.length)[0] || null;
+
+            res.json({ frames, orfs, bestORF });
+        }
+    }
+
+    // Forward frames
+    translate(dna, out => { frames["+1"] = out; done++; checkDone(); });
+    translate(dna.slice(1), out => { frames["+2"] = out; done++; checkDone(); });
+    translate(dna.slice(2), out => { frames["+3"] = out; done++; checkDone(); });
+
+    // Reverse frames
+    translate(reverseComplement, out => { frames["-1"] = out; done++; checkDone(); });
+    translate(reverseComplement.slice(1), out => { frames["-2"] = out; done++; checkDone(); });
+    translate(reverseComplement.slice(2), out => { frames["-3"] = out; done++; checkDone(); });
+
 });
 
 /* =========================================================
@@ -59,9 +133,6 @@ app.post("/localization", (req, res) => {
 
         const raw = stdout.trim();
 
-        // -----------------------------
-        // 🧠 Deterministic rule engine
-        // -----------------------------
         let location = "Cytoplasm";
         let confidence = 0.6;
 
@@ -79,7 +150,7 @@ app.post("/localization", (req, res) => {
             location = "Mitochondria";
             confidence = 0.8;
         } 
-        else if (seq.includes("SS") || seq.includes("S/T")) {
+        else if (seq.includes("SS")) {
             location = "Secretory Pathway";
             confidence = 0.75;
         }
@@ -159,7 +230,7 @@ Protein: ${protein?.trim()}`;
 });
 
 /* =========================================================
-   🔬 BLAST PARSER (STABLE)
+   🔬 BLAST PARSER
 ========================================================= */
 app.post("/upload-blast", upload.single("file"), (req, res) => {
 
@@ -197,8 +268,7 @@ Hit: ${hit}
 Identity: ${identity}%
 Length: ${length}
 E-value: ${e}
-------------------------
-`);
+------------------------`);
         }
     });
 
@@ -206,7 +276,7 @@ E-value: ${e}
 });
 
 /* =========================================================
-   🧬 UNIPROT (STABLE + CLEAN JSON)
+   🧬 UNIPROT
 ========================================================= */
 app.post("/uniprot", async (req, res) => {
 
