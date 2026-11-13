@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node --test"
   },
   "keywords": [
     "bioinformatics",
@@ -16,10 +17,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.4",
-    "express": "^4.22.1",
-    "multer": "^2.1.1",
-    "node-fetch": "^3.3.2"
+    "express": "^5.3.0",
+    "multer": "^2.5.0"
   },
   "repository": {
     "type": "git",
@@ -29,5 +28,8 @@
   "bugs": {
     "url": "https://github.com/Nextto1/bioinfo-web-toolkit/issues"
   },
-  "homepage": "https://github.com/Nextto1/bioinfo-web-toolkit#readme"
+  "homepage": "https://github.com/Nextto1/bioinfo-web-toolkit#readme",
+  "engines": {
+    "node": ">=22"
+  }
 }

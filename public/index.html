@@ -184,7 +184,7 @@ async function runTranslate(){
     const r = await fetch("/translate",{
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:"dna="+dna
+        body:new URLSearchParams({dna})
     });
 
     const result = await r.text();
@@ -200,7 +200,7 @@ async function runAdvanced(){
     const r = await fetch("/translate-advanced",{
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:"dna="+dna
+        body:new URLSearchParams({dna})
     });
 
     const data = await r.json();
@@ -250,7 +250,7 @@ async function motifRun(){
     const r=await fetch("/motif",{
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:`sequence=${seq}&motif=${m}`
+        body:new URLSearchParams({sequence:seq,motif:m})
     });
 
     const result = await r.text();
@@ -266,14 +266,14 @@ async function runLocalization(){
     const r = await fetch("/localization",{
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:`protein=${seq}`
+        body:new URLSearchParams({protein:seq})
     });
 
     const data = await r.json();
 
     const display = `
 📍 Location: ${data.location}
-🎯 Confidence: ${data.confidence}
+Heuristic: ${data.rawPrediction}
 🔗 ${data.link}
 `;
 
@@ -302,7 +302,7 @@ async function uniprotRun(){
     const r = await fetch("/uniprot",{
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:"id="+id
+        body:new URLSearchParams({id})
     });
 
     const data = await r.json();
@@ -329,6 +329,7 @@ async function runMulti(){
 
     const r=await fetch("/upload-multi",{method:"POST",body:fd});
     const data=await r.json();
+    if(data.error){ document.getElementById("multiOut").innerText=data.error; return; }
 
     document.getElementById("multiOut").innerText=data.report;
     analysisReport.multi.push(data.report);
@@ -346,9 +347,11 @@ function downloadReport(){
 
     const blob=new Blob([report],{type:"text/plain"});
     const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
+    const objectUrl=URL.createObjectURL(blob);
+    a.href=objectUrl;
     a.download="report.txt";
     a.click();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);
 }
 
 </script>
