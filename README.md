@@ -20,3 +20,5 @@ Requires Node.js 22+ and Perl on PATH. Run `npm ci --ignore-scripts`, `npm test`
 Previously committed uploads remain in Git history and main until separately reviewed. Removing tracking cannot revoke previous public exposure. No history rewriting or deletion of original local uploads is part of Phase 1.
 
 `npm test` exercises actual Perl execution and HTTP routes, malformed input, shell/regex payloads, upload boundaries, GC/translation, overlapping motifs, reverse-strand ORFs, BLAST HSP ordering and localization uncertainty. CI runs the same checks on Linux. UniProt tests use injected responses; tests do not require its live service.
+
+Dashboard regression tests also verify that every button handler exists, GC submissions are encoded correctly, validation/network errors are displayed without polluting reports, and missing or oversized uploads are rejected before sending. The dashboard JavaScript is served locally with no Chart.js CDN dependency.
